@@ -4,6 +4,7 @@ import open3d as o3
 from os.path import join
 import glob
 import cv2
+import pickle
 
 config_path = './A2D2-Dataset/cams_lidars.json'
 
@@ -215,6 +216,14 @@ def augment_point_cloud(id):
     pcd = o3.geometry.PointCloud()
     pcd.points = o3.utility.Vector3dVector(points_2)
     o3.visualization.draw_geometries([pcd])
+
+# plots a point cloud
+def plot_point_cloud(points):
+    pc_o3 = o3.geometry.PointCloud()
+    pc_o3.points = o3.utility.Vector3dVector(points)
+    o3.visualization.draw_geometries([pc_o3])
+
+
 
 
 config = load_config(config_path)

@@ -1,16 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from file_loader import *
 from shapely.geometry import Point, Polygon
 import cv2
 import math as m
-from project_utils import *
 
 
 # Class for instances in the semantic segmentation
 class SemanticObject:
     def __init__(self):
         self.bounding_pixel_coords = []
+        self.pixels = []
         self.pc_coords = []
         self.class_ = ""
         self.depth = 0.0
@@ -18,6 +16,11 @@ class SemanticObject:
     # Bounding Pixels
     def set_bounding_pixels(self, pixels):
         self.bounding_pixel_coords = pixels
+
+    # pixels
+    def set_pixels(self, x, y):
+        self.pixels = np.append(x.reshape(x.shape[0], 1),
+                                y.reshape(y.shape[0], 1), axis=1)
 
     # Pointcloud Points
     def set_pc_coords(self, pc_coords):
@@ -46,8 +49,11 @@ class Separator:
         return rgb
 
     # Finds pixel coordinates of a given class color
-    def find_class_pixels(self, color_hex):
+    def find_class_pixels(self, color_hex, undistort=False):
         rgb = self.hex_to_rgb(color_hex)
+        label = self.data.label
+        if undistort:
+            label = undistort_image(label, 'front_center')
         label = self.data.label * 255.
         image_coords = np.where(np.all(label == rgb, axis=2))
         image_gray = np.where(np.all(label == rgb, axis=2), 1, 0)
@@ -63,7 +69,7 @@ class Separator:
         print(f"Calculating semantic objects of {class_} ...")
         x, y, image_gray = self.find_class_pixels(class_color_hex)
         contours = self.find_contours(image_gray)
-        objects = self.create_semantic_objects(contours)
+        objects = self.create_semantic_objects(contours, x, y)
         self.semantic_objects[class_] = objects
 
     # separates labels of all classes in a semantic segmentation
@@ -72,7 +78,7 @@ class Separator:
             self.separate_labels(color)
 
     # creates semantic objects <SemanticObject> out of a contour array
-    def create_semantic_objects(self, contours):
+    def create_semantic_objects(self, contours, x, y):
         objects = []
         for frame in contours:
             sem_object = SemanticObject()
@@ -80,6 +86,13 @@ class Separator:
             # bounding pixels
             frame = frame.reshape(len(frame), 2)
             sem_object.set_bounding_pixels(frame)
+
+            # pixels
+            # try:
+            #     x_sem, y_sem = self.find_pixels_in_contour(sem_object, x, y)
+            #     sem_object.set_pixels(x_sem, y_sem)
+            # except:
+            #     pass
 
             # pc coords
             points = self.find_instance_pc_points(sem_object)
@@ -101,13 +114,32 @@ class Separator:
         contours = contours[0] if len(contours) == 2 else contours[1]
         return contours
 
+    # finds pixels of a semantic object given its contours
+    # Instance type: <SemanticObject>
+    def find_pixels_in_contour(self, sem_object, x, y):
+        try:
+            points = []
+            frame = Polygon(sem_object.bounding_pixel_coords)
+            shapely_points = self.convert_pc_pixels_to_shapely(x, y)
+            for i in range(len(shapely_points)):
+                if frame.contains(shapely_points[i]):
+                    points.append((x[i], y[i]))
+            points = np.array(points)
+            x = points[:, 0]
+            y = points[:, 1]
+            return x, y
+        except:
+            return
+
     # Finds pc pixels of an instance in the semantic segmentation
     # Instance type: <SemanticObject>
     def find_instance_pc_points(self, sem_object):
         try:
             points = []
             frame = Polygon(sem_object.bounding_pixel_coords)
-            shapely_points = self.convert_pc_pixels_to_shapely(self.data.pointcloud)
+            x = self.data.pointcloud['col']
+            y = self.data.pointcloud['row']
+            shapely_points = self.convert_pc_pixels_to_shapely(x, y)
             point_ids = []
             for i in range(len(shapely_points)):
                 if frame.contains(shapely_points[i]):
@@ -115,13 +147,11 @@ class Separator:
                     points.append(self.data.pointcloud['points'][i])
             return points
         except:
-            return None
+            return
 
     # Converts points of a PC to type <Point> of the Shapely library
     # Necessary to check if point is inside a contour using Polygon.contains(Point)
-    def convert_pc_pixels_to_shapely(self, pointcloud):
-        x = pointcloud['col']
-        y = pointcloud['row']
+    def convert_pc_pixels_to_shapely(self, x, y):
         points = []
         for i in range(len(x)):
             points.append(Point(x[i], y[i]))
@@ -156,9 +186,10 @@ class Separator:
 # #
 # sep = Separator(data)
 #
-# id = "#b97a57"
-# sep.seperate_labels(id)
-# frame = sep.semantic_objects['Road blocks'][0].bounding_pixel_coords
-# plt.plot(frame[:, 0], frame[:, 1])
+# id = "#f1e6ff"
+# sep.separate_labels(id)
+# # sep.separate_all_labels()
+# frame = sep.semantic_objects[class_list[id]][0].bounding_pixel_coords
+# # plt.plot(frame[:, 0], frame[:, 1])
 # sep.plot_data(id)
-# print(len(sep.semantic_objects['Road blocks']))
+# print(len(sep.semantic_objects[class_list[id]]))
