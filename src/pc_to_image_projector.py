@@ -42,13 +42,18 @@ def draw_box(points, image):
 # -------------------------------
 #       error reproduction
 # -------------------------------
-# data = Loader(path, 57)
+# data = Loader(path, 0)
 # id = 0
-# points = get_points(data.boxes[id])
+# box = data.boxes[id]
+# points = get_points(box)
 # print(data.boxes[id]['class'])
+# print(box)
 # image = data.image
 # draw_box(points, image)
 # image = undistort_image(image, 'front_center')
+# # x = [box['left'], box['left'], box['right'], box['right'], box['left']]
+# # y = [box['bottom'], box['top'], box['top'], box['bottom'], box['bottom']]
+# # plt.plot(y, x)
 # plt.imshow(image)
 # plt.axis('off')
 # plt.show()
@@ -57,31 +62,34 @@ def draw_box(points, image):
 
 ##### Testing Area #####
 # #
-# data = Loader('./A2D2-Dataset/Dataset/', 11)
+# data = Loader(path, 116)
 # pointcloud = data.pointcloud
 # # # for i in range(0, len(data.boxes)):
-# points = get_points(data.boxes[5])
-# print(data.boxes[5]['class'])
+# # points = get_points(data.boxes[5])
+# # print(data.boxes[5]['class'])
 # image = data.image
-# draw_box(points, image)
+# # draw_box(points, image)
 # # y = pointcloud['row']
 # # x = pointcloud['col']
-# # # pts = np.array([project_from_pc_to_image(cam_matrix_undist, i) for i in pointcloud['points']])
+# pts = np.array([project_from_pc_to_image(cam_matrix_undist, i) for i in pointcloud['points']])
 # # # print(pts.shape)
-# image = undistort_image(image, 'front_center')
-# # label = undistort_image(data.label, 'front_center')
-# # # # plt.scatter(pts[:, 1], pts[:, 0], s=0.1)
+# # image = undistort_image(image, 'front_center')
+# label = undistort_image(data.label, 'front_center')
+# # plt.scatter(pts[:, 1], pts[:, 0], s=0.1, color='y')
 # # # plt.scatter(x, y, s=0.1, color='b')
-# plt.imshow(image)
+# # plt.imshow(image)
+# img = map_lidar_points_onto_image(image, pointcloud)
 # # plt.imshow(label, alpha=0.5)
-# plt.axis('off')
+# plt.imshow(img)
+# #
+# # plt.axis('off')
 # plt.show()
 #
 # points = pointcloud['points']
 # pc_o3 = o3.geometry.PointCloud()
 # pc_o3.points = o3.utility.Vector3dVector(points)
 # # entities_to_draw = [pc_o3]
-# entities_to_draw = []
+# entities_to_draw = [pc_o3]
 # for bbox in data.boxes:
 #     linesets = get_bboxes_wire_frames([bbox], color=(255, 0, 0))
 #     entities_to_draw.append(linesets[0])

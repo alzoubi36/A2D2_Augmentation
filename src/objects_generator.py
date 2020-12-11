@@ -1,5 +1,6 @@
 from semantic_partitioner import *
 from project_utils import *
+from pc_to_image_projector import *
 import random as rd
 
 
@@ -68,8 +69,13 @@ class ObjectsGenerator:
             image = background_1.astype('uint8')
             image[:, :, 3] = condition
             box = fg_obj.box
-            x1, x2 = int(box['left']), int(box['right'])
-            y1, y2 = int(box['top']), int(box['bottom'])
+            box_pixels_3d = project_box_from_pc_to_image(get_points(box), cam_matrix_dist)
+            max = np.max(box_pixels_3d, axis=0)
+            min = np.min(box_pixels_3d, axis=0)
+            x1, x2 = int(min[0]), int(max[0])
+            y1, y2 = int(min[1]), int(max[1])
+            # x1, x2 = int(box['left']), int(box['right'])
+            # y1, y2 = int(box['top']), int(box['bottom'])
             image = image[x1:x2, y1:y2, :]
             fg_obj.set_crop(image)
 
@@ -187,4 +193,7 @@ def create_foregrounds(path):
             except:
                 continue
 
-create_foregrounds(path)
+# create_foregrounds(path)
+# data = Loader(path, 0)
+# foreground_objs = ObjectsGenerator(data)
+# foreground_objs.save_foregrounds()

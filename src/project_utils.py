@@ -87,11 +87,13 @@ def get_points(bbox):
 # changes the rotation matrix of a 3d bbox according to a rotation angle
 def update_rotation(box, angle):
     axis = box['axis']
+
     if axis[2] > 0:
         angle = box['angle'] + angle
     else:
         angle = box['angle'] - angle
     box["rotation"] = axis_angle_to_rotation_mat(axis, angle)
+    box['angle'] = angle
     return box
 
 
@@ -224,6 +226,61 @@ def plot_point_cloud(points):
     o3.visualization.draw_geometries([pc_o3])
 
 
+def hsv_to_rgb(h, s, v):
+    if s == 0.0:
+        return v, v, v
+
+    i = int(h * 6.0)
+    f = (h * 6.0) - i
+    p = v * (1.0 - s)
+    q = v * (1.0 - s * f)
+    t = v * (1.0 - s * (1.0 - f))
+    i = i % 6
+
+    if i == 0:
+        return v, t, p
+    if i == 1:
+        return q, v, p
+    if i == 2:
+        return p, v, t
+    if i == 3:
+        return p, q, v
+    if i == 4:
+        return t, p, v
+    if i == 5:
+        return v, p, q
+
+
+def map_lidar_points_onto_image(image_orig, lidar, pixel_size=3, pixel_opacity=1):
+    image = np.copy(image_orig)
+
+    # get rows and cols
+    rows = (lidar['row'] + 0.5).astype(np.int)
+    cols = (lidar['col'] + 0.5).astype(np.int)
+
+    # lowest distance values to be accounted for in colour code
+    MIN_DISTANCE = np.min(lidar['distance'])
+    # largest distance values to be accounted for in colour code
+    MAX_DISTANCE = np.max(lidar['distance'])
+
+    # get distances
+    distances = lidar['distance']
+    # determine point colours from distance
+    colours = (distances - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)
+    colours = np.asarray([np.asarray(hsv_to_rgb(0.75 * c, \
+                                                np.sqrt(pixel_opacity), 1.0)) for c in colours])
+    pixel_rowoffs = np.indices([pixel_size, pixel_size])[0] - pixel_size // 2
+    pixel_coloffs = np.indices([pixel_size, pixel_size])[1] - pixel_size // 2
+    canvas_rows = image.shape[0]
+    canvas_cols = image.shape[1]
+    for i in range(len(rows)):
+        pixel_rows = np.clip(rows[i] + pixel_rowoffs, 0, canvas_rows - 1)
+        pixel_cols = np.clip(cols[i] + pixel_coloffs, 0, canvas_cols - 1)
+        image[pixel_rows, pixel_cols, :] = \
+            (1. - pixel_opacity) * \
+            np.multiply(image[pixel_rows, pixel_cols, :], \
+                        colours[i]) + pixel_opacity * colours[i]
+    return image.astype(np.float32)
 
 
 config = load_config(config_path)

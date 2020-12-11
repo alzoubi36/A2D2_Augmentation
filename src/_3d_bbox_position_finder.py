@@ -13,12 +13,13 @@ data = Loader(path, 6)
 # calculate the rotation angle of a new position
 def new_position_rotation_angle(box, new_pos, old_pos):
     old_pos = old_pos[:2]
+    print('old pos', old_pos)
     # print("old: ", old_pos)
-    # print("new: ", new_pos)
+    print("new pos: ", new_pos)
     angle_cos = np.dot(old_pos, new_pos) / \
                 (np.linalg.norm(old_pos) * np.linalg.norm(new_pos))
     angle = np.arccos(angle_cos)
-    # print("angle: ", angle * 180 / np.pi)
+    print("angle: ", angle * 180 / np.pi)
     if old_pos[1] < new_pos[1]:
         return angle
     else:
@@ -32,7 +33,7 @@ def generate_positions(points):
     y_max = np.max(points[:, 1])
     y_min = np.min(points[:, 1])
     rand_x = np.random.randint(x_min + 2, x_max - 80)
-    rand_y = np.random.randint(y_min + 15, y_max - 15)
+    rand_y = np.random.randint(y_min + 10, y_max - 10)
     # rand_y = np.random.randint(old_pos[1], - old_pos[1])
     return rand_x, rand_y
 
@@ -105,17 +106,18 @@ def view_suggested_pos_from_above(global_points, coords=[40, 10], old_pos=[0, 0]
 
 ##### Testing Area #####
 
-# data_box = Loader('./A2D2-Dataset/Dataset/', 11)
-# old_pos = data_box.boxes[5]['center']
-#
-#
-# # Visualize
-# new_position = find_position(points, box, old_pos)
-# # old_pos = box['center']
-# view_suggested_pos_from_above(points, new_position, old_pos)
-# view_suggested_pos_3d(new_position, points, box)
-#
-# # show boxes
+data_box = Loader(path, 19)
+old_pos = data_box.boxes[0]['center']
+box=data_box.boxes[0]
+points = data_box.pointcloud['points']
+
+# Visualize
+new_position = find_position(points, box, old_pos)
+# old_pos = box['center']
+view_suggested_pos_from_above(points, new_position, old_pos)
+view_suggested_pos_3d(new_position, points, box)
+
+# show boxes
 # new_box = box.copy()
 # new_box['center'][0] = new_position[0]
 # new_box['center'][1] = new_position[1]

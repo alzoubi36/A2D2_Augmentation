@@ -2,9 +2,9 @@ from _3d_bbox_position_finder import *
 from semantic_partitioner import *
 from objects_generator import *
 import pickle
+import os
 
-print(path)
-data = Loader(path, 10)
+data = Loader(path, 0)
 
 # Class for generating synthetic data for the A2D2-Dataset.
 class SyntheticDataGenerator:
@@ -14,24 +14,45 @@ class SyntheticDataGenerator:
         self.points = self.pointcloud['points']
         self.label = data.label
         self.get_semantic_objects()
-        self.load_foreground('4268_0')
+        # self.load_foreground('20180807145028_lidar_frontcenter_000004328_0')
+        # self.load_foreground('20181107132730_lidar_frontcenter_000002037_1')
+        # self.load_foreground('201811
+        # 07132730_lidar_frontcenter_000008518_0')
+        # self.load_foreground('20180925101535_lidar_frontcenter_000035242_0')
+        # self.load_foreground('20180810142822_lidar_frontcenter_000059924_0')
+        self.load_foreground('20180807145028_lidar_frontcenter_000034002_0')
+        # self.load_foreground('20181016125231_lidar_frontcenter_000026726_2')
+        # self.load_foreground('20180925124435_lidar_frontcenter_000065071_0_1')
 
         # Todo: create objects for augmentation (boxes, labels and crops)
         # self.box = Loader('./A2D2-Dataset/Dataset/', 11).boxes[5]
 
     # Proposes a new 3D box position
     def propose_3dbbox_position(self):
-        return find_position(self.points, box, self.old_pos)
+        return find_position(self.points, self.box, self.old_pos)
 
     # Projects a given 3d box into image
     def project_3dbox_into_image(self):
-        new_position = self.propose_3dbbox_position()
+        # new_position = self.propose_3dbbox_position()
+        new_position = (self.old_pos[0], -self.old_pos[1])
         # new_box = self.box.copy()
+        # self.box['center'][1] = self.box['center'][1] - 5
+        # print(type(self.box['center']))
         self.box['center'][0] = new_position[0]
         self.box['center'][1] = new_position[1]
+        points2 = get_points(self.box)
+        id = 7
         angle = new_position_rotation_angle(self.box, new_position, self.old_pos)
-        update_rotation(self.box, angle)
+        self.box = update_rotation(self.box, angle)
         points = get_points(self.box)
+        print('Axis: ', self.box['axis'])
+        print('-------------------')
+        print('distance old:', m.sqrt(points2[id][0]**2 + points2[id][1]**2))
+        print('distance new:', m.sqrt(points[id][0]**2 + points[id][1]**2))
+        print('-------------------')
+        print('points_old: ', points2)
+        print('points_new: ', points)
+        print('-------------------')
         pixels = project_box_from_pc_to_image(points, cam_matrix_dist)
         return pixels, points
 
@@ -59,9 +80,9 @@ class SyntheticDataGenerator:
         indices = sem_object.pixels
         width = augmented.shape[1]
         height = augmented.shape[0]
-        print('shape: ', augmented.shape)
-        print('width: ', width)
-        print('height: ', height)
+        # print('shape: ', augmented.shape)
+        # print('width: ', width)
+        # print('height: ', height)
         for i in indices:
             x = int(i[0] - pos[0])
             y = int(i[1] - pos[1])
@@ -95,14 +116,21 @@ class SyntheticDataGenerator:
     # Tries to find saved semantic objects on the hard disk
     # if nothing is found it calculates them
     def get_semantic_objects(self):
-        f_name = data.file_names_3dbox[data.id][:-4]
+        f_name = data.file_names_rgb[data.id].split('\\')[-1]
+        f_name = './background_objs/' + f_name[:-4] + '_semantic_objects.sp'
+        # print(f_name)
+
         try:
             self.semantic_objects = pickle.load(open(f_name, "rb"))
         except:
-            self.seperator = Separator(data)
-            self.seperator.separate_all_labels()
-            self.semantic_objects = self.seperator.semantic_objects
-            pickle.dump(self.seperator.semantic_objects, open(f_name, "wb"))
+            self.create_folder('background_objs')
+            self.create_semantic_objs(f_name)
+
+    def create_semantic_objs(self, f_name):
+        self.seperator = Separator(data)
+        self.seperator.separate_all_labels()
+        self.semantic_objects = self.seperator.semantic_objects
+        pickle.dump(self.seperator.semantic_objects, open(f_name, "wb"))
 
     # Plots all semantic object bounding pixels in the image
     def plot_data(self):
@@ -120,13 +148,20 @@ class SyntheticDataGenerator:
         plt.show()
 
     # Plots 2D and 3D boxes
-    def plot_2d_3d_boxes(self, pixels_2d, pixels_3d):
-        plt.plot(pixels_3d[:, 1], pixels_3d[:, 0], linewidth=0.5)
-        plt.plot(pixels_2d[:, 0], pixels_2d[:, 1], color="r", linewidth=1)
-        plt.plot([pixels_2d[-1][0], pixels_2d[0][0]],
-                 [pixels_2d[-1][1], pixels_2d[0][1]], color="r", linewidth=1)
+    def plot_2d_3d_boxes(self, pixels_2d, pixels_3d, _2d = False):
+        plt.plot(pixels_3d[:, 1], pixels_3d[:, 0], linewidth=0.3, color="r")
+        if _2d:
+            plt.plot(pixels_2d[:, 0], pixels_2d[:, 1], color="b", linewidth=0.8)
+            plt.plot([pixels_2d[-1][0], pixels_2d[0][0]],
+                     [pixels_2d[-1][1], pixels_2d[0][1]], color="b", linewidth=0.8)
+        # pts_3d = np.array([[20, 0, 0], [100, 0, 100]])
+        # pts_2d = np.array([project_from_pc_to_image(cam_matrix_dist, i) for i in pts_3d])
+        # print(pts_2d)
+        # plt.plot(pts_2d[:, 1], pts_2d[:, 0])
         # plt.scatter(pixels_2d[0][0], pixels_2d[0][1])
         # plt.scatter(pixels_2d[1][0], pixels_2d[1][1], color='r')
+        # plt.scatter(pixels_2d[2][0], pixels_2d[2][1], color='r')
+        # plt.scatter(pixels_2d[0][0], pixels_2d[0][1], color='r')
         # plt.imshow(self.data.image)
         plt.axis('off')
         # plt.show()
@@ -175,13 +210,17 @@ class SyntheticDataGenerator:
         :param to_del: <RGBA Color list like>
         :return: adjusted foreground image
         """
-        arr = np.all(overlay == to_del, axis=2)
-        arr = arr.reshape(overlay.shape[0], overlay.shape[1], 1)
-        arr = np.append(arr, arr, axis=2)
-        arr = np.append(arr, arr, axis=2)
         if label:
-            overlay = np.where(arr, [0, 0, 0, 0], to_del)
+            arr = overlay[:, :, 3]
+            arr = arr.reshape(overlay.shape[0], overlay.shape[1], 1)
+            arr = np.append(arr, arr, axis=2)
+            arr = np.append(arr, arr, axis=2)
+            overlay = np.where(arr, to_del, [0, 0, 0, 0])
         else:
+            arr = np.all(overlay == to_del, axis=2)
+            arr = arr.reshape(overlay.shape[0], overlay.shape[1], 1)
+            arr = np.append(arr, arr, axis=2)
+            arr = np.append(arr, arr, axis=2)
             overlay = np.where(arr, [0, 0, 0, 0], overlay)
         return overlay
 
@@ -199,26 +238,40 @@ class SyntheticDataGenerator:
         return resized
 
     # Calculates new size of the image crop in the new postition
-    def get_new_scale(self, y1, y2):
-        h_new = y2 - y1
-        h_old = self.box['right'] - self.box['left']
+    def get_new_scale(self, box_pixels_3d):
+        max_1 = np.max(box_pixels_3d, axis=0)
+        min_1 = np.min(box_pixels_3d, axis=0)
+        h_new = max_1[0] - min_1[0]
+        print('------------------')
+        print('new height: ', h_new)
+        box_pixels = project_box_from_pc_to_image(get_points(self.old_box), cam_matrix_dist)
+        max_0 = np.max(box_pixels, axis=0)
+        min_0 = np.min(box_pixels, axis=0)
+        h_old = max_0[0] - min_0[0]
+        print('old height: ', h_old)
+        print('------------------')
+        print('new width: ', max_1[1] - min_1[1])
+        print('old width: ', max_0[1] - min_0[1])
+        print('------------------')
         scale = h_new / h_old
         return abs(scale)
 
     # Generate a synthetic image by putting the new object in the scene.
     def generate_synthetic_scene(self, save=False):
+        print('creating synthetic scene ...')
         pixels = [1, [-3000, 0]]
 
         # Insure that the proposed box can be seen in image
         while pixels[1][0] < -200 or pixels[1][0] > 1900:
             pixels, box_pixels_3d, points = self.get_2dbox()
 
-        y2, y1 = pixels[1][1], pixels[0][1]
-        scale = self.get_new_scale(y1, y2)
+        scale = self.get_new_scale(box_pixels_3d)
+        # scale = 1
         overlay = self.foreground
+        overlay = self.adjust_alpha(overlay, 0, full=True)
         synthetic_img = self.get_rgb(overlay, scale, pixels)
         synthetic_label = self.get_label(overlay, scale, pixels)
-        self.plot_2d_3d_boxes(pixels, box_pixels_3d)
+        self.plot_2d_3d_boxes(pixels, box_pixels_3d, _2d=True)
         if save:
             self.save_synthetic_scene(synthetic_img, synthetic_label, self.box)
         return synthetic_img, synthetic_label
@@ -227,20 +280,25 @@ class SyntheticDataGenerator:
     def load_foreground(self, name):
         self.foreground = cv2.imread(f'./foregrounds/{name}.png', cv2.IMREAD_UNCHANGED)
         foreground_obj = pickle.load(open(f'./foregrounds/{name}.fg', "rb"))
+        foreground_obj2 = pickle.load(open(f'./foregrounds/{name}.fg', "rb"))
         self.box, self.foreground_pc = foreground_obj.box, foreground_obj.pc_points
+        self.old_box = foreground_obj2.box.copy()
         self.old_pos = foreground_obj.old_pos
 
     # Todo: to be written efficiently : get_rgb & get_label
     def get_rgb(self, overlay, scale, pixels):
         background = self.data.image
-        print(scale)
         background_1 = cv2.cvtColor(background, cv2.COLOR_RGB2RGBA).copy()
         overlay = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGRA).copy()
-        overlay = self.adjust_foreground(overlay, [0, 230, 64, 255]) / 255
+        # overlay = self.adjust_foreground(overlay, [0, 230, 64, 255]) / 255
+        overlay = overlay/255
+        print('scale:', scale)
         overlay = self.rescale_foreground(overlay, scale)
         depth = self.get_box_depth(get_points(self.box))
-        # pos = int(box_pixels_3d[5][1]), int(box_pixels_3d[5][0])
-        pos = int(pixels[1][0]), int(pixels[1][1])
+        # x = int((pixels[2][0] + pixels[1][0])/2 - overlay.shape[1]/2)
+        # y = int((pixels[0][1] + pixels[1][1])/2 - overlay.shape[0]/2)
+        # pos = (x, y)
+        pos = round(pixels[1][0]), round(pixels[1][1])
         overlay = self.hide_all_pixels(overlay, depth, pos)
         synthetic_img = self.overlay_foreground_background(background_1, overlay, pos)
         synthetic_img[:, :, 3] = np.where(synthetic_img[:, :, 3] > 1, .99, synthetic_img[:, :, 3])
@@ -249,14 +307,13 @@ class SyntheticDataGenerator:
 
     def get_label(self, overlay, scale, pixels):
         background = self.data.label
-        print(scale)
         background_1 = cv2.cvtColor(background, cv2.COLOR_RGB2RGBA).copy()
         overlay = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGRA).copy()
         overlay = self.adjust_foreground(overlay, [0, 230, 64, 255], label=True) / 255
         overlay = self.rescale_foreground(overlay, scale)
         depth = self.get_box_depth(get_points(self.box))
         pos = int(pixels[1][0]), int(pixels[1][1])
-        overlay = self.hide_all_pixels(overlay, depth, pos)
+        # overlay = self.hide_all_pixels(overlay, depth, pos)
         synthetic_label = self.overlay_foreground_background(background_1, overlay, pos)
         synthetic_label[:, :, 3] = np.where(synthetic_label[:, :, 3] > 1, .99, synthetic_label[:, :, 3])
         synthetic_label = np.where(synthetic_label < 0, 0, synthetic_label)
@@ -271,15 +328,36 @@ class SyntheticDataGenerator:
     def save_synthetic_scene(self, synthetic_img, synthetic_label, box):
         i = rd.random()
         i = str(i)[-4:]
-        plt.imsave(f'./synthetic data/RGB/img_{i}.png', synthetic_img)
+        self.create_folder('synthetic data')
+        sub_folders = ['camera', 'label', 'label3D', 'lidar']
+        try:
+            for f in sub_folders:
+                self.create_folder('synthetic data/' + f)
+        except:
+            pass
+        plt.imsave(f'./synthetic data/camera/img_{i}.png', synthetic_img)
         plt.imsave(f'./synthetic data/Label/label_{i}.png', synthetic_label)
         boxes = data.boxes.append(box)
-        json.dump(boxes, open(f"./synthetic data/3DLabel/3dbox_{i}.json", "w"))
+        json.dump(boxes, open(f"./synthetic data/label3D/3dbox_{i}.json", "w"))
         foreground_pc = self.get_pc(box, self.foreground_pc)
         pointcloud = dict(self.data.pointcloud)
         pointcloud['points'] = np.append(self.data.pointcloud['points'],
-                                                   foreground_pc, axis=0)
-        np.savez_compressed(f"./synthetic data/Lidar/lidar_{i}", pointcloud)
+                                         foreground_pc, axis=0)
+        np.savez_compressed(f"./synthetic data/lidar/lidar_{i}", pointcloud)
+
+    @staticmethod
+    def create_folder(name):
+        if name not in os.listdir('./'):
+            os.mkdir(name)
+
+    def adjust_alpha(self, img, a, full=False):
+        if full:
+            img[:, :, 3] = img[:, :, 3] * 0
+            img[:, :, 3] = img[:, :, 3] + 255
+        else:
+            img[:, :, 3] = img[:, :, 3] * a
+        return img
+
 
 
 gen = SyntheticDataGenerator(data)
@@ -290,12 +368,15 @@ gen = SyntheticDataGenerator(data)
 #         print('min: ', synthetic_img.min())
 #     except:
 #         continue
-synthetic_img, synthetic_label = gen.generate_synthetic_scene(save=False)
-# plt.imsave(f'./synthetic data/RGB/synthetic_img.png', synthetic_img)
-# plt.imsave(f'./synthetic data/Label/synthetic_label.png', synthetic_label)
-
-plt.imshow(synthetic_img)
-plt.show()
-
-plt.imshow(synthetic_label)
+# synthetic_img, synthetic_label = gen.generate_synthetic_scene(save=False)
+# # plt.imsave(f'./synthetic data/RGB/synthetic_img.png', synthetic_img)
+# # plt.imsave(f'./synthetic data/Label/synthetic_label.png', synthetic_label)
+#
+# plt.imshow(synthetic_img)
+# # plt.imsave(f'./synthetic data/synthetic_img.png', data.label)
+# plt.axis('off')
+# # plt.show()
+#
+# # plt.imshow(synthetic_label)
+# # plt.savefig(f'./Test_beispiele/fig_{rd.randint(0,100)}.png', dpi=300)
 # plt.show()
