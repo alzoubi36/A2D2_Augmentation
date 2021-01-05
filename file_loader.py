@@ -13,7 +13,7 @@ class Loader:
     def load_data(self):
         root_path = self.path
         id = self.id
-        self.folder_names_scene = os.listdir('./A2D2-Dataset/A2D2/camera_lidar_semantic_bboxes/camera_lidar_semantic_bboxes/')[:-2]
+        self.folder_names_scene = os.listdir('./A2D2-Dataset/camera_lidar_semantic_bboxes/')[:-2]
         # print(self.folder_names_scene)
 
         # Lidar Data
@@ -33,5 +33,5 @@ class Loader:
         self.label = plt.imread(self.file_names_2dlabel[id])
 
 
-path = './A2D2-Dataset/A2D2/camera_lidar_semantic_bboxes/camera_lidar_semantic_bboxes/20180810_142822/'
+path = './A2D2-Dataset/camera_lidar_semantic_bboxes/20180807_145028/'
 # data = Loader(path, 13)

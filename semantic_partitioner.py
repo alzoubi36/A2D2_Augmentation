@@ -182,10 +182,24 @@ class Separator:
         plt.axis("off")
         plt.show()
 
-# data = Loader('./A2D2-Dataset/Dataset/', 8)
-# #
+    # Generates custom masks for the classes: Car, Pedestrian and Bicycle
+    def create_specified_mask(self, car=True, pedestrian=True, bicycle=False):
+        x, y, mask = self.find_class_pixels('C0C0C0')
+        classes = {'Car':car, 'Pedestrian':pedestrian , 'Bicycle':bicycle}
+        sem_classes = list(class_list.values())
+        for class_, allowed in classes.items():
+            if allowed:
+                for i in range(len(class_list)):
+                    if class_ in sem_classes[i]:
+                        color = list(class_list.keys())[i]
+                        x, y, mask_c = self.find_class_pixels(color)
+                        mask += mask_c
+        return mask
+
+# data = Loader(path, 550)
+# # #
 # sep = Separator(data)
-#
+# sep.create_specified_mask(car=True)
 # id = "#f1e6ff"
 # sep.separate_labels(id)
 # # sep.separate_all_labels()

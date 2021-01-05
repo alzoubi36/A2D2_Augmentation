@@ -1,5 +1,6 @@
 from semantic_partitioner import *
 from project_utils import *
+from pc_to_image_projector import *
 import random as rd
 
 
@@ -8,6 +9,7 @@ class ForegroundObject:
     class for a foreground object with its 3d box, image crop and pc points.
     used in the module synthetic_data_generator.py to be placed in a given scene
     """
+
     def __init__(self):
         self.box = {}
         self.crop = []
@@ -30,6 +32,7 @@ class ForegroundObject:
     def set_old_position(self, old_pos):
         self.old_pos = old_pos
 
+
 class ObjectsGenerator:
     """
     class for extracting foreground objects out of a given scene. found objects
@@ -38,6 +41,7 @@ class ObjectsGenerator:
     - No occlusion
     - No truncation
     """
+
     def __init__(self, data):
         self.foreground_objects = []
         self.data = data
@@ -58,15 +62,20 @@ class ObjectsGenerator:
         seperator = Separator(data)
         for fg_obj in self.foreground_objects:
             color = self.get_color(fg_obj)
-            x, y, gray = seperator.find_class_pixels(color)
-            gray = self.turn_to_4channel(gray)
-            background = data.image
-            # background = undistort_image(background, 'front_center')
+            x, y, mask = seperator.find_class_pixels(color)
+            background = data.image * 255
             background_1 = cv2.cvtColor(background, cv2.COLOR_RGB2RGBA).copy()
-            image = np.where(gray == [1, 1, 1, 1], background_1, [0, 230 / 255, 64 / 255, 0])
+            condition = np.where(mask == 1, 255, 0).astype('uint')
+            image = background_1.astype('uint8')
+            image[:, :, 3] = condition
             box = fg_obj.box
-            x1, x2 = int(box['left']), int(box['right'])
-            y1, y2 = int(box['top']), int(box['bottom'])
+            box_pixels_3d = project_box_from_pc_to_image(get_points(box), undist=False)
+            max = np.max(box_pixels_3d, axis=0)
+            min = np.min(box_pixels_3d, axis=0)
+            x1, x2 = int(min[1]), int(max[1])
+            y1, y2 = int(min[0]), int(max[0])
+            # x1, x2 = int(box['left']), int(box['right'])
+            # y1, y2 = int(box['top']), int(box['bottom'])
             image = image[x1:x2, y1:y2, :]
             fg_obj.set_crop(image)
 
@@ -88,8 +97,8 @@ class ObjectsGenerator:
     # its semantic segmentation
     def get_color(self, fg_obj):
         box = fg_obj.box
-        x = int((box['right'] + box['left'])/2)
-        y = int((box['bottom'] + box['top'])/2)
+        x = int((box['right'] + box['left']) / 2)
+        y = int((box['bottom'] + box['top']) / 2)
         rgb = self.data.label[x][y]
         color = self.rgb_to_hex(rgb)
         return color
@@ -117,6 +126,19 @@ class ObjectsGenerator:
         self.get_crops(data)
         self.get_pc_points()
 
+    def check_color(self, overlay, to_find, label=False):
+        """
+        finds a color in an image.
+        :param overlay: <image>
+        :param to_find: <RGBA Color list like>
+        :return: logical array with the same dimension as overlay
+        """
+        arr = np.all(overlay == to_find, axis=2)
+        arr = arr.reshape(overlay.shape[0], overlay.shape[1], 1)
+        arr = np.append(arr, arr, axis=2)
+        arr = np.append(arr, arr, axis=2)
+        return arr
+
     # Plots foreground objects in the scene
     def plot_foreground_object(self, id):
         try:
@@ -129,10 +151,16 @@ class ObjectsGenerator:
     def save_foregrounds(self):
         frame_id = self.data.file_names_lidar[self.data.id].split('\\')[-1]
         frame_id = str(frame_id)[:-4]
-        for i in range(len(self.foreground_objects)):
-            pickle.dump(self.foreground_objects[i], open(f'./foregrounds/{frame_id}_{i}.fg', "wb"))
-            plt.imsave(f'./foregrounds/{frame_id}_{i}.png', self.foreground_objects[i].crop)
-
+        try:
+            for i in range(len(self.foreground_objects)):
+                pickle.dump(self.foreground_objects[i], open(f'./foregrounds/{frame_id}_{i}.fg', "wb"))
+                plt.imsave(f'./foregrounds/{frame_id}_{i}.png', self.foreground_objects[i].crop)
+        except:
+            import os
+            os.mkdir('foregrounds')
+            for i in range(len(self.foreground_objects)):
+                pickle.dump(self.foreground_objects[i], open(f'./foregrounds/{frame_id}_{i}.fg', "wb"))
+                plt.imsave(f'./foregrounds/{frame_id}_{i}.png', self.foreground_objects[i].crop)
 
 
 # Plot results
@@ -144,22 +172,28 @@ class ObjectsGenerator:
 # print(np.append(data.pointcloud['points'],foreground_objs.foreground_objects[0].pc_points, axis=0 ).shape)
 # # plot_point_cloud(foreground_objs.foreground_objects[2].pc_points)
 
-#-----------------------
+# -----------------------
 #   save foregrounds
-#-----------------------
+# -----------------------
 
-data_2 = Loader(path, 0)
-scenes = data_2.folder_names_scene
-path = './A2D2-Dataset/A2D2/camera_lidar_semantic_bboxes/camera_lidar_semantic_bboxes/'
+def create_foregrounds(path):
+    data_2 = Loader(path, 0)
+    scenes = data_2.folder_names_scene
+    path = './A2D2-Dataset/camera_lidar_semantic_bboxes/'
 
-for i in scenes:
-    subpath = path + i
-    data_1 = Loader(subpath, 0)
-    range_ = len(data_1.file_names_3dbox)
-    for i in range(range_):
-        try:
-            data = Loader(subpath, i)
-            foreground_objs = ObjectsGenerator(data)
-            foreground_objs.save_foregrounds()
-        except:
-            continue
+    for i in scenes:
+        subpath = path + i
+        data_1 = Loader(subpath, 0)
+        range_ = len(data_1.file_names_3dbox)
+        for i in range(range_):
+            try:
+                data = Loader(subpath, i)
+                foreground_objs = ObjectsGenerator(data)
+                foreground_objs.save_foregrounds()
+            except:
+                continue
+
+# create_foregrounds(path)
+# data = Loader(path, 0)
+# foreground_objs = ObjectsGenerator(data)
+# foreground_objs.save_foregrounds()
