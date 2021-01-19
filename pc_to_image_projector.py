@@ -1,16 +1,24 @@
 from file_loader import *
 
 
-# Project into undistorted image
 def project_from_pc_to_image_undist(point):
+    """
+    Projects into undistorted image
+    :param point: [x, y, z]
+    :return: [u, v]
+    """
     point = np.array([point[1], point[2], point[0]])
     image_coords = np.dot(cam_matrix_undist, point)
     image_coords = image_coords / image_coords[2]
     return image_coords[0], image_coords[1]
 
 
-# Project into distorted image
 def project_from_pc_to_image_dist(point):
+    """
+    Projects into distorted image
+    :param point: [x, y, z]
+    :return: [u, v]
+    """
     point = np.array([point[1], point[2], point[0]])
     rtemp = ttemp = np.array([0, 0, 0], dtype='float32')
     dist_parms = np.asarray([[-0.2611312587700434, 0.0, 0.0, 0.0, 0.0]])
@@ -20,8 +28,13 @@ def project_from_pc_to_image_dist(point):
     return x, y
 
 
-# General projection function from PC to image
 def project_to_image(point, undist=True):
+    """
+    General projection function from PC to image
+    :param point: [x, y, z]
+    :param undist: to distorted or undistorted?
+    :return: [u, v]
+    """
     if undist:
         point = project_from_pc_to_image_undist(point)
     else:
@@ -29,8 +42,13 @@ def project_to_image(point, undist=True):
     return point
 
 
-# creates line_sets for drawing a bbox in image space
 def project_box_from_pc_to_image(points, undist=True):
+    """
+    creates line_sets for drawing a bbox in image space
+    :param points: box points <8 x 3>
+    :param undist: to distorted or undistorted?
+    :return: line set <20 x [u, v]>
+    """
     pixels = np.array([project_to_image(i, undist) for i in points])
     line_set = np.asarray([pixels[0], pixels[1], pixels[2],
                            pixels[3], pixels[0],
@@ -39,30 +57,38 @@ def project_box_from_pc_to_image(points, undist=True):
                            pixels[7], pixels[4], pixels[5],
                            pixels[6], pixels[7], pixels[4],
                            pixels[5], pixels[2], pixels[1],
-                           pixels[6]])
+                           pixels[6]]).astype('float32')
     return line_set
 
 
-# draws a 3d-bbox in a rgb-image
 def draw_box(points, image, undist=True):
+    """
+    draws a 3d-bbox in a rgb-image
+    :param points: box points <8 x 3>
+    :param undist: to distorted or undistorted?
+    :param image: as loaded with Loader <image>
+    :return: None
+    """
     line_set = project_box_from_pc_to_image(points, undist)
-    plt.plot(line_set[:, 0], line_set[:, 1], linewidth=0.5, color="r")
+    plt.plot(line_set[:, 0], line_set[:, 1], linewidth=0.5, color="b")
     plt.imshow(image)
     plt.axis("off")
-    # plt.show()
 
 # -------------------------------
 #       error reproduction
 # -------------------------------
-# data = Loader(path, 20)
-# id = 0
+# data = Loader(path, 21)
+# id = 2
 # box = data.boxes[id]
 # points = get_points(box)
+# print(data.pointcloud['row'][0])
+# print(data.pointcloud['col'][0])
+# print(project_to_image(data.pointcloud['points'][0], undist=True))
 # # print(data.boxes[id]['class'])
 # # print(box)
 # image = data.image
-# draw_box(points, image, undist=False)
-# # image = undistort_image(image, 'front_center')
+# image = undistort_image(image, 'front_center')
+# draw_box(points, image, undist=True)
 # # x = [box['left'], box['left'], box['right'], box['right'], box['left']]
 # # y = [box['bottom'], box['top'], box['top'], box['bottom'], box['bottom']]
 # # plt.plot(y, x)

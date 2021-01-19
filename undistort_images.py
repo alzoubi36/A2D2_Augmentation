@@ -1,16 +1,19 @@
 from semantic_partitioner import *
 import os
 
-
 """
-Module for undistorting images in the A2D2-Dataset.
+Module for undistorting images and labels in the A2D2-Dataset.
 """
 
 path = './A2D2-Dataset/camera_lidar_semantic_bboxes'
 directories = os.listdir(path)
 
+# folder names for the distorted images and labels
+folder_name_rgb = 'camera_undist'
+folder_name_label = 'label_undist'
 
-# creates image folders
+
+# creates folders in A2D2 directories
 def create_folders(name):
     try:
         for dir in directories:
@@ -38,20 +41,26 @@ def empty_folder(path):
 
 
 # Deletes image folders. It may be needed.
-def del_folders(name):
-    for dir in directories:
-        subpath = os.path.join(path, dir)
-        if os.path.isdir(subpath):
-            sub_directories = os.listdir(subpath)
-            if name in sub_directories:
-                rgb_path = os.path.join(subpath, name)
-                empty_folder(rgb_path)
-                os.rmdir(rgb_path)
+def del_folders(names):
+    for i in range(2):
+        try:
+            for dir in directories:
+                subpath = os.path.join(path, dir)
+                if os.path.isdir(subpath):
+                    sub_directories = os.listdir(subpath)
+                    for name in names:
+                        if name in sub_directories:
+                            rgb_path = os.path.join(subpath, name)
+                            empty_folder(rgb_path)
+                            os.rmdir(rgb_path)
+        except:
+            continue
 
 
-# Creates undistorted images.
-def generate_undistorted_images(folder_name):
-    create_folders(folder_name)
+# Creates undistorted images and labels
+def generate_undistorted_images(rgb_f=folder_name_rgb, label_f=folder_name_label):
+    create_folders(rgb_f)
+    create_folders(label_f)
     created = 0
     for dir in directories:
         subpath = os.path.join(path, dir)
@@ -60,14 +69,15 @@ def generate_undistorted_images(folder_name):
             for i in range(num):
                 data = Loader(subpath, i)
                 image = undistort_image(data.image, 'front_center')
+                label = undistort_image(data.label, 'front_center', label=True)
                 f_name = data.file_names_rgb[i].split('\\')[-1]
-                plt.imsave(os.path.join(subpath, folder_name, 'cam_front_center', f_name), image)
+                plt.imsave(os.path.join(subpath, rgb_f, 'cam_front_center', f_name), image)
+                plt.imsave(os.path.join(subpath, label_f, 'cam_front_center', f_name), label)
                 created += 1
                 print(f'Current: {f_name}')
                 print(f'Created undistorted images: {created}')
                 print('--------------------------')
 
-
 # create_folders('car')
-# del_folders('rgb')
-# generate_undistorted_images('rgb')
+# del_folders([folder_name_rgb, folder_name_label])
+generate_undistorted_images()

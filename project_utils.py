@@ -87,14 +87,14 @@ def get_points(bbox):
 # changes the rotation matrix of a 3d bbox according to a rotation angle
 def update_rotation(box, angle, old_angle):
     # axis = box['axis']
-    axis = np.array([0, 0, 1])
+    axis = np.array([0, 0, 1]).astype('float32')
     if axis[2] > 0:
-        angle = old_angle - angle
-    else:
-        angle = old_angle + angle
-    box["rotation"] = axis_angle_to_rotation_mat(axis, angle)
-    box['angle'] = angle
-    print("new angle: ", angle * 180 / np.pi)
+        angle2 = old_angle - angle
+    # else:
+    #     angle = old_angle + angle
+    box["rotation"] = axis_angle_to_rotation_mat(axis, angle2)
+    box['angle'] = angle2
+    # print("new angle: ", np.degrees(angle2))
     return box
 
 
@@ -132,8 +132,13 @@ def get_bboxes_wire_frames(bboxes, linesets=None, color=None):
 
     return linesets
 
+# undistorts images or labels
+def undistort_image(image, cam_name, label=False):
+    if label:
+        mapx, mapy = cv2.initUndistortRectifyMap(cam_matrix_dist, dist_param, None, cam_matrix_undist, (1920, 1208), 5)
+        label = cv2.remap(image, mapx, mapy, cv2.INTER_NEAREST)
+        return label
 
-def undistort_image(image, cam_name):
     if cam_name in ['front_left', 'front_center', 'front_right', 'side_left', 'side_right', 'rear_center']:
         # get parameters from config file
         intr_mat_undist = np.asarray(config['cameras'][cam_name]['CamMatrix'])

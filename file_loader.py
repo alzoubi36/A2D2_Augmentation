@@ -13,7 +13,8 @@ class Loader:
     def load_data(self):
         root_path = self.path
         id = self.id
-        self.folder_names_scene = os.listdir('./A2D2-Dataset/camera_lidar_semantic_bboxes/')[:-2]
+        self.folder_names_scene = [dir for dir in os.listdir('./A2D2-Dataset/camera_lidar_semantic_bboxes/')\
+                                    if os.path.isdir(os.path.join('./A2D2-Dataset/camera_lidar_semantic_bboxes/', dir))]
         # print(self.folder_names_scene)
 
         # Lidar Data
@@ -25,11 +26,11 @@ class Loader:
         self.boxes = read_bounding_boxes(self.file_names_3dbox[id])
 
         # Images
-        self.file_names_rgb = sorted(glob.glob(join(root_path, 'camera/cam_front_center/*.png')))
+        self.file_names_rgb = sorted(glob.glob(join(root_path, 'camera_undist/cam_front_center/*.png')))
         self.image = plt.imread(self.file_names_rgb[id])
 
         # Labels
-        self.file_names_2dlabel = sorted(glob.glob(join(root_path, 'label/cam_front_center/*.png')))
+        self.file_names_2dlabel = sorted(glob.glob(join(root_path, 'label_undist/cam_front_center/*.png')))
         self.label = plt.imread(self.file_names_2dlabel[id])
 
 
