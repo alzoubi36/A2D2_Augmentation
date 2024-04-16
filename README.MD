@@ -8,16 +8,6 @@ The full thesis can be found [here](https://drive.google.com/file/d/1PYzMn8CMUyD
 
 This research aims to develop a novel algorithm for generating synthetic data from combined camera and LiDAR data for 3D object detection. The A2D2 dataset for autonomous driving released by Audi was used as the basis for this contribution. The thesis investigates the feasibility of generating realistic synthetic data by placing foreground objects from one frame into other frames while ensuring no collisions with other objects.
 
-## Repository Structure
-
-This repository is organized into the following subdirectories:
-
-* **evaluation**: Contains scripts and code for evaluating the generated synthetic data.
-* **generation**: Includes scripts and code for generating synthetic data from the A2D2 dataset.
-* **utils**: Provides utility functions and scripts used across the project.
-* **data**: Contains the processed A2D2 dataset used for the research.
-* **reports**: Includes the thesis document and other relevant reports.
-
 ## Getting Started
 
 1. Clone the repository:
