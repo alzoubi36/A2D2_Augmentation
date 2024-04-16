@@ -39,7 +39,7 @@ a2d2-augmentation/synthetic_data_generator.py
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE.md file for details.
+This project is licensed under the MIT License.
 
 ## Disclaimer
 
