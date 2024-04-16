@@ -37,10 +37,6 @@ pip install -r requirements.txt
 a2d2-augmentation/synthetic_data_generator.py
 ```
 
-## Contributing
-
-Contributions are welcome!
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE.md file for details.
